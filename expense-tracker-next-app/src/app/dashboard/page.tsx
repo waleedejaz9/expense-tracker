@@ -47,17 +47,41 @@ export default function Dashboard() {
   async function fetchGroups() {
     if (!user) return;
     setLoading(true);
-
+  
     const { data, error } = await supabase
+      .from("memberships")
+      .select("groupId")
+      .eq("userId", user.id); // Get only groups where the user is a member
+  
+    if (error) {
+      console.error("Error fetching user memberships:", error);
+      setLoading(false);
+      return;
+    }
+  
+    const groupIds = data.map((membership) => membership.groupId);
+  
+    if (groupIds.length === 0) {
+      setGroups([]);
+      setLoading(false);
+      return;
+    }
+  
+    const { data: groupsData, error: groupsError } = await supabase
       .from("group")
       .select("*, memberships(count)")
+      .in("id", groupIds) // Fetch only groups where the user is a member
       .order("id", { ascending: false });
-
-    if (!error) {
-      setGroups(data.map(g => ({ ...g, memberCount: g.memberships[0]?.count || 0 })));
+  
+    if (!groupsError) {
+      setGroups(groupsData.map(g => ({ ...g, memberCount: g.memberships[0]?.count || 0 })));
+    } else {
+      console.error("Error fetching groups:", groupsError);
     }
+  
     setLoading(false);
   }
+  
 
   function openGroupModal() {
     setIsGroupModalOpen(true);
