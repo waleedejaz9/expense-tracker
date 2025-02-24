@@ -1,0 +1,10 @@
+go to supabase and create the database
+create the schema 
+1. users    id, username, email, password, timestamps  
+2. group    id, name, adminId, timestamps
+3. expenses id, amount, description, category, date, created_by
+4. membership id, groupId, userId
+
+
+add you keys from supabase to env.local
+to start: dev instance - npm run dev. 
