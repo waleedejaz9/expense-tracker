@@ -9,17 +9,48 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid group ID" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  // Fetch expenses
+  const { data: expenses, error: expensesError } = await supabase
     .from("expenses")
     .select("*")
     .eq("groupId", groupId);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (expensesError) {
+    return NextResponse.json({ error: expensesError.message }, { status: 500 });
   }
 
-  return NextResponse.json(data, { status: 200 });
+  // Extract unique user IDs from expenses
+  const userIds = [...new Set(expenses.map(expense => expense.createdBy))];
+
+  if (userIds.length === 0) {
+    return NextResponse.json(expenses, { status: 200 }); // No users to fetch
+  }
+
+  // Fetch user details in a single query
+  const { data: users, error: usersError } = await supabase
+    .from("users")
+    .select("id, username")
+    .in("id", userIds);
+
+  if (usersError) {
+    return NextResponse.json({ error: usersError.message }, { status: 500 });
+  }
+
+  // Create a lookup table for user IDs to usernames
+  const userMap = users.reduce((acc, user) => {
+    acc[user.id] = user.username;
+    return acc;
+  }, {} as Record<number, string>);
+
+  // Merge usernames into expenses
+  const formattedData = expenses.map(expense => ({
+    ...expense,
+    created_by_name: userMap[expense.createdBy] || "Unknown",
+  }));
+
+  return NextResponse.json(formattedData, { status: 200 });
 }
+
 
 export async function POST(req: NextRequest) {
   try {

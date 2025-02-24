@@ -120,15 +120,33 @@ export default function Dashboard() {
   async function handleDeleteGroup(groupId: string) {
     if (!confirm("Are you sure you want to delete this group?")) return;
 
-    const { error } = await supabase.from("group").delete().eq("id", groupId).eq("adminId", user?.id);
+    // First, delete all memberships related to this group
+    const { error: membershipsError } = await supabase
+        .from("memberships")
+        .delete()
+        .eq("groupId", groupId);
 
-    if (error) {
-      console.error("Error deleting group:", error);
-      return;
+    if (membershipsError) {
+        console.error("Error deleting memberships:", membershipsError);
+        return;
     }
 
+    // Now delete the group
+    const { error: groupError } = await supabase
+        .from("group")
+        .delete()
+        .eq("id", groupId)
+        .eq("adminId", user?.id);
+
+    if (groupError) {
+        console.error("Error deleting group:", groupError);
+        return;
+    }
+
+    // Update state
     setGroups(prevGroups => prevGroups.filter(group => group.id !== groupId));
-  }
+}
+
 
   // Debounced user search function
   const searchUsers = useCallback(
