@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 export async function POST(req: NextRequest, context: { params: { groupId: string } }) {
     try {
       const { params } = context; // Correct way to access params
-      const groupId = Number(params.groupId); // Extract groupId safely
+      const groupId = await Number(params.groupId); // Extract groupId safely
   
       if (isNaN(groupId)) {
         return NextResponse.json({ error: "Invalid group ID" }, { status: 400 });

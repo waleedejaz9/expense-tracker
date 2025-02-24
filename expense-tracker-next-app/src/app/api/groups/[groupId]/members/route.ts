@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
 export async function GET(req: NextRequest, context: { params: { groupId: string } }) {
-  const { groupId } = context.params;
+  const { groupId } = await context.params;
 
   if (!groupId) {
     return NextResponse.json({ error: "Group ID is required" }, { status: 400 });
@@ -48,15 +48,18 @@ export async function POST(req: NextRequest) {
 
   // 2️⃣ **Check if the requester is the group admin**
   const { data: group, error: groupError } = await supabase
-    .from("groups")
+    .from("group")
     .select("adminId")
     .eq("id", groupId)
     .single();
-  console.log(group)
+
   if (groupError || !group) {
-    return NextResponse.json({  error: "Unauthorized: Only admins can remove members"  }, { status: 404 });
+    return NextResponse.json({ error: "Group not found" }, { status: 404 });
   }
 
+  if (group.adminId !== userId) {
+    return NextResponse.json({ error: "Unauthorized: Only the admin can remove members" }, { status: 403 });
+  }
   // 3️⃣ **Update memberships table to "gray out" removed members**
   const { error: updateError } = await supabase
     .from("memberships")
